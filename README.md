@@ -3,6 +3,8 @@
 A local keyframe editor for [NVlabs/motionbricks](https://github.com/NVlabs/motionbricks).
 Put a few poses on a timeline, press **AI In-betweens**, and MotionBricks fills in the motion between them.
 
+![A walk into a jump: orange keyframes, green breakdowns along the path, blue AI in-betweens, and the jump span's settings](docs/screenshots/overview.jpg)
+
 ```bash
 ./setup.sh   # once: clones motionbricks next to this folder, fetches its LFS assets, makes .venv, runs npm install
 ./run.sh     # then open http://127.0.0.1:8765
@@ -45,6 +47,10 @@ Put a few poses on a timeline, press **AI In-betweens**, and MotionBricks fills 
 
 ## Using it
 
+| Pick a pose | Pose by hand |
+|---|---|
+| ![The pose list open beside the mannequin](docs/screenshots/pose-list.jpg) | ![Pose mode: yellow joints to drag, with Undo, Redo and Reset](docs/screenshots/pose-mode.jpg) |
+
 ### Keyframes and poses
 
 | | |
@@ -69,6 +75,10 @@ Put a few poses on a timeline, press **AI In-betweens**, and MotionBricks fills 
 | Span settings | Click a gap between two keyframes, or the path between them in the viewport |
 
 ### Viewport
+
+| Side view, orthographic | Shapes |
+|---|---|
+| ![Snapped to the Front view in orthographic: the jump arc with its breakdowns](docs/screenshots/side-view.jpg) | ![Shapes round the mannequin, a cube selected with its rotate gizmo, and the right-click Add menu](docs/screenshots/shapes.jpg) |
 
 | | |
 |---|---|

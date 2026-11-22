@@ -1,0 +1,44 @@
+MotionBricks Studio
+
+This project includes, adapts or downloads the third-party work below. The licence
+texts it includes are in the licenses/ folder.
+
+
+1. MotionBricks (https://github.com/NVlabs/motionbricks)
+   Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES.
+   Source code licensed under the Apache License, Version 2.0 (licenses/Apache-2.0.txt).
+
+   Files here that are derived from it, and changed from the originals:
+     server/engine.py  numpy + ONNX Runtime port of motionbricks/model/soma/engine.py and
+                       kernels.py, so the model runs without TensorRT or an NVIDIA GPU.
+     server/bvh.py     BVH loader written to match motionbricks.io.bvh.
+     server/quat.py    quaternion helpers written to match the maths the MotionBricks
+                       runtime uses.
+
+
+2. MotionBricks model and sample motion data (NOT included in this repository)
+   setup.sh downloads the SOMA ONNX model and the BVH motion clips from NVlabs/motionbricks
+   into ../motionbricks. They stay under NVIDIA's own terms and are not redistributed here.
+   The motion clips are under the NVIDIA Sample Data Evaluation License
+   (motionbricks/assets/motions/LICENSE.txt). It allows internal use to evaluate and test
+   NVIDIA technology, and does not allow sharing the clips or works derived from them.
+   The pose library (server/library.py) is sampled from those clips at run time.
+
+
+3. Male Base Mesh, by orange-juice-games
+   web/models/mannequin.glb
+   Source: https://orange-juice-games.itch.io/male-base-mesh
+           (GitHub copy: https://github.com/BoQsc/Godot-3D-Male-Base-Mesh)
+   Dedicated to the public domain under CC0 1.0 Universal
+   (https://creativecommons.org/publicdomain/zero/1.0/). No attribution is required;
+   it is credited here with thanks.
+
+
+4. Lucide icons (https://lucide.dev)
+   web/js/icons.js inlines SVG icons from Lucide. The icons named shape-* and view-* are
+   drawn or adapted for this project.
+   ISC License (licenses/Lucide-ISC.txt).
+
+
+5. three.js (https://threejs.org)
+   MIT License. Installed by npm into web/node_modules; not included in this repository.

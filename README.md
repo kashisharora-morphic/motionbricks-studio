@@ -36,14 +36,14 @@ Put a few poses on a timeline, press **AI In-betweens**, and MotionBricks fills 
   - jump spans get jump poses on the arc.
   **Flip direction** turns a span's breakdowns to face back along the path. Breakdowns are computed, not saved,
   and the AI runs through them, so the motion follows the path and the arc.
-- **Mannequin.** `web/models/Xbot.glb` is the Mixamo X Bot as shipped in the three.js examples
-  (`examples/models/gltf/Xbot.glb`). `web/js/mannequin.js` retargets SOMA poses onto it:
-  - It pairs SOMA's *stand* pose with the X Bot's *idle* clip to get one fixed offset per bone.
+- **Mannequin.** `web/models/mannequin.glb` is the *Male Base Mesh* by orange-juice-games, a public-domain (CC0)
+  model with a Blender Rigify rig. `web/js/mannequin.js` retargets SOMA poses onto it:
+  - It maps the rig's bones to the names the app uses, and adds the toe tips and the top of the head, which the rig lacks.
+  - It turns the model from its T-pose into SOMA's *stand* pose, which gives one fixed offset per bone.
   - Every frame it matches arm and leg directions exactly. The feet just follow their calibrated rotation, so soles stay flat.
   - A ground clamp lifts the body whenever a heel, toe or knee would go below the floor.
 
-  Mixamo characters can be used in your own projects but not redistributed as standalone assets, so swap in
-  your own model before sharing this outside your team.
+  To use another model, change `RIG` in `mannequin.js` to its bone names.
 
 ## Using it
 
@@ -99,6 +99,19 @@ Each row is a layer and the parts that go with it. The number key toggles it.
 | Breakdowns | Green ghosts 8 · jump height handles 0 |
 | In-betweens | Blue onion skins 2 · generated hip path 5 |
 
+## Licensing
+
+See [NOTICE](NOTICE) for the details and [licenses/](licenses) for the licence texts.
+
+- `server/engine.py`, `server/bvh.py` and `server/quat.py` are derived from
+  [NVlabs/motionbricks](https://github.com/NVlabs/motionbricks) (Apache License 2.0, © NVIDIA), with changes.
+- The MotionBricks model and motion clips are not in this repository: `setup.sh` downloads them from NVIDIA.
+  The clips are under the NVIDIA Sample Data Evaluation License, which allows internal evaluation and testing of
+  NVIDIA technology only, and doesn't allow sharing them or works made from them.
+- The mannequin is the *Male Base Mesh* by [orange-juice-games](https://orange-juice-games.itch.io/male-base-mesh),
+  public domain (CC0 1.0).
+- Icons in `web/js/icons.js` are from [Lucide](https://lucide.dev) (ISC); three.js (MIT) is installed by npm.
+
 ## Files
 
 | | |
@@ -108,7 +121,8 @@ Each row is a layer and the parts that go with it. The number key toggles it.
 | `server/library.py` | Pose library and key-pose windows for the model |
 | `server/bvh.py`, `server/quat.py` | BVH loading, forward kinematics, quaternion maths |
 | `web/js/app.js` | The editor: scene, keyframes, spans, generation, gizmos, shapes |
-| `web/js/mannequin.js` | X Bot retargeting, ground clamp, picking |
+| `web/js/mannequin.js` | Retargeting onto the mannequin, ground clamp, picking |
+| `web/models/mannequin.glb` | Male Base Mesh (CC0) |
 | `web/js/timeline.js` | Canvas timeline |
 | `web/js/viewcube.js` | View cube |
 | `web/js/icons.js` | Inlined Lucide icons (ISC licence) |

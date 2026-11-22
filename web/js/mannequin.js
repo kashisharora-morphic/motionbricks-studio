@@ -1,36 +1,64 @@
-// Mixamo X Bot driven by SOMA poses.
+// A rigged base mesh driven by SOMA poses.
+//
+// The model is "Male Base Mesh" by orange-juice-games (CC0 1.0, public domain), a Blender
+// Rigify metarig in a T-pose: web/models/mannequin.glb. RIG maps its bones to the names the
+// rest of the app uses (Hips, LeftUpLeg, ...), and the kit adds end bones for the toe tips
+// and the top of the head, which the rig lacks.
 //
 // MotionBricks outputs SOMA local joint rotations. The SOMA rest pose is not a T-pose
-// (every bone points down its local X axis), so the X Bot is calibrated against a
-// known matching pose instead: SOMA "stand" vs the X Bot's own "idle" clip at t=0.
-// For each mapped bone, K = W_soma_cal^-1 * M_xbot_cal, and at runtime
-// M_xbot = W_soma * K. Limb bones then get a small swing so their direction matches
-// the SOMA bone exactly, which keeps hands and feet where the model put them.
+// (every bone points down its local X axis), so the model is calibrated against a matching
+// pose instead: SOMA "stand", and the model turned from its T-pose into the same stand
+// (CAL_AIM points each bone where SOMA's does; the head and feet keep their upright T-pose
+// rotation). For each mapped bone, K = W_soma_cal^-1 * M_model_cal, and at runtime
+// M_model = W_soma * K. Limb bones then get a small swing so their direction matches the
+// SOMA bone exactly, which keeps hands and feet where the model put them.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 
-const MAP = { // X Bot bone -> SOMA joint
+// App bone name -> this model's bone (glTF names lose their dots: "spine.001" -> "spine001").
+const RIG = {
+  Hips: 'spine', Spine: 'spine001', Spine1: 'spine002', Spine2: 'spine003', Neck: 'spine004', Head: 'spine005',
+  LeftShoulder: 'shoulderL', LeftArm: 'upper_armL', LeftForeArm: 'forearmL', LeftHand: 'handL',
+  RightShoulder: 'shoulderR', RightArm: 'upper_armR', RightForeArm: 'forearmR', RightHand: 'handR',
+  LeftUpLeg: 'thighL', LeftLeg: 'shinL', LeftFoot: 'footL', LeftToeBase: 'toeL', LeftHeel: 'heel02L',
+  RightUpLeg: 'thighR', RightLeg: 'shinR', RightFoot: 'footR', RightToeBase: 'toeR', RightHeel: 'heel02R',
+};
+const TOE_LEN = 0.07; // toe joint to the tip of the toes, metres
+// Calibration: bone -> [its child bone, SOMA joint, SOMA child]; the bone is turned so it
+// points the way that SOMA bone points in the stand pose.
+const CAL_AIM = {
+  Hips: ['Spine', 'Hips', 'Spine1'], Spine: ['Spine1', 'Spine1', 'Spine2'], Spine1: ['Spine2', 'Spine2', 'Chest'],
+  Spine2: ['Neck', 'Chest', 'Neck1'], Neck: ['Head', 'Neck1', 'Head'],
+  LeftShoulder: ['LeftArm', 'LeftShoulder', 'LeftArm'], LeftArm: ['LeftForeArm', 'LeftArm', 'LeftForeArm'], LeftForeArm: ['LeftHand', 'LeftForeArm', 'LeftHand'],
+  RightShoulder: ['RightArm', 'RightShoulder', 'RightArm'], RightArm: ['RightForeArm', 'RightArm', 'RightForeArm'], RightForeArm: ['RightHand', 'RightForeArm', 'RightHand'],
+  LeftUpLeg: ['LeftLeg', 'LeftLeg', 'LeftShin'], LeftLeg: ['LeftFoot', 'LeftShin', 'LeftFoot'],
+  RightUpLeg: ['RightLeg', 'RightLeg', 'RightShin'], RightLeg: ['RightFoot', 'RightShin', 'RightFoot'],
+};
+const CAL_UPRIGHT = ['Head', 'LeftFoot', 'RightFoot']; // keep their T-pose world rotation: head up, soles flat
+
+const MAP = { // app bone -> SOMA joint
   Hips: 'Hips', Spine: 'Spine1', Spine1: 'Spine2', Spine2: 'Chest', Neck: 'Neck1', Head: 'Head',
   LeftShoulder: 'LeftShoulder', LeftArm: 'LeftArm', LeftForeArm: 'LeftForeArm', LeftHand: 'LeftHand',
   RightShoulder: 'RightShoulder', RightArm: 'RightArm', RightForeArm: 'RightForeArm', RightHand: 'RightHand',
   LeftUpLeg: 'LeftLeg', LeftLeg: 'LeftShin', LeftFoot: 'LeftFoot', LeftToeBase: 'LeftToeBase',
   RightUpLeg: 'RightLeg', RightLeg: 'RightShin', RightFoot: 'RightFoot', RightToeBase: 'RightToeBase',
 };
-// Limb bones whose direction is matched exactly: X Bot child bone, SOMA joint -> SOMA child.
+// Limb bones whose direction is matched exactly: model child bone, SOMA joint -> SOMA child.
 const SWING = {
   LeftArm: ['LeftForeArm', 'LeftArm', 'LeftForeArm'], LeftForeArm: ['LeftHand', 'LeftForeArm', 'LeftHand'],
   RightArm: ['RightForeArm', 'RightArm', 'RightForeArm'], RightForeArm: ['RightHand', 'RightForeArm', 'RightHand'],
   LeftUpLeg: ['LeftLeg', 'LeftLeg', 'LeftShin'], LeftLeg: ['LeftFoot', 'LeftShin', 'LeftFoot'],
   RightUpLeg: ['RightLeg', 'RightLeg', 'RightShin'], RightLeg: ['RightFoot', 'RightShin', 'RightFoot'],
-  // Feet are left out on purpose: the X Bot's ankle sits higher above the ball of the foot
-  // than SOMA's, so matching the ankle->ball direction tipped the toes up and dropped the
-  // heel. The calibrated rotation alone keeps the sole as flat as SOMA's.
+  // Feet are left out on purpose: the model's ankle can sit higher above the ball of the
+  // foot than SOMA's, so matching the ankle->ball direction would tip the toes up and drop
+  // the heel. The calibrated rotation alone keeps the sole as flat as SOMA's.
 };
 const BOX_PAD = 0.1;   // flesh around the joints, metres
 const HEAD_TOP = 0.2;  // head joint to the top of the head
 const Y = new THREE.Vector3(0, 1, 0);
-const strip = (name) => name.replace(/^mixamorig:?/, '');
+const APP_NAME = Object.fromEntries(Object.entries(RIG).map(([app, model]) => [model, app]));
+const appName = (name) => APP_NAME[name] || name;
 
 function headingOf(right, left) { // same convention as the model: forward = Y x (right - left)
   const ax = right.x - left.x, az = right.z - left.z;
@@ -75,20 +103,49 @@ export class MannequinKit {
     const r = rest.pos[this.index.RightLeg], l = rest.pos[this.index.LeftLeg];
     this.restForward = new THREE.Vector3(r.z - l.z, 0, -(r.x - l.x)).normalize();
 
-    // X Bot calibration pose: its own idle clip at t = 0, turned to face +Z.
+    // Model calibration pose: its T-pose turned into SOMA's stand (see CAL_AIM).
     this.template = gltf.scene;
-    const mixer = new THREE.AnimationMixer(this.template);
-    const idle = gltf.animations.find((a) => a.name === 'idle') || gltf.animations[0];
-    if (idle) { mixer.clipAction(idle).play(); mixer.update(0); }
     this.template.updateMatrixWorld(true);
+    const byName = {};
+    this.template.traverse((o) => { if (o.isBone) byName[appName(o.name)] = o; });
+    const wp = (n) => byName[n].getWorldPosition(new THREE.Vector3());
+    const setWorld = (b, q) => {
+      b.quaternion.copy(b.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(q));
+      b.updateMatrixWorld(true);
+    };
+    // End points the rig lacks, as child bones: toe tips along each toe, the top of the head.
+    const addEnd = (name, parent, world) => {
+      const e = new THREE.Bone(); e.name = name;
+      e.position.copy(byName[parent].worldToLocal(world.clone()));
+      byName[parent].add(e); byName[name] = e;
+    };
+    for (const side of ['Left', 'Right']) {
+      const toe = byName[side + 'ToeBase'];
+      const along = new THREE.Vector3(0, 1, 0).applyQuaternion(toe.getWorldQuaternion(new THREE.Quaternion()));
+      addEnd(side + 'Toe_End', side + 'ToeBase', wp(side + 'ToeBase').addScaledVector(along, TOE_LEN));
+    }
+    const headTop = new THREE.Box3().setFromObject(this.template).max.y;
+    addEnd('HeadTop_End', 'Head', wp('Head').setY(headTop));
+    this.template.updateMatrixWorld(true);
+    // Which way the T-pose faces; `fix` turns it to face +Z like SOMA's stand.
+    const fix = new THREE.Quaternion().setFromAxisAngle(Y, -headingOf(wp('RightUpLeg'), wp('LeftUpLeg')));
+    const unfix = fix.clone().invert();
+    const tWorld = {};
+    for (const n of CAL_UPRIGHT) tWorld[n] = byName[n].getWorldQuaternion(new THREE.Quaternion());
+    this.template.traverse((b) => { // parents before children
+      if (!b.isBone) return;
+      const name = appName(b.name), aim = CAL_AIM[name];
+      if (aim) {
+        const from = wp(aim[0]).sub(b.getWorldPosition(new THREE.Vector3())).normalize();
+        const to = cal.pos[this.index[aim[2]]].clone().sub(cal.pos[this.index[aim[1]]]).normalize().applyQuaternion(unfix);
+        setWorld(b, b.getWorldQuaternion(new THREE.Quaternion()).premultiply(new THREE.Quaternion().setFromUnitVectors(from, to)));
+      } else if (tWorld[name]) setWorld(b, tWorld[name]);
+    });
     const bones = [];
     this.template.traverse((o) => { if (o.isBone) bones.push(o); });
-    const byName = Object.fromEntries(bones.map((b) => [strip(b.name), b]));
-    const wp = (n) => byName[n].getWorldPosition(new THREE.Vector3());
-    const fix = new THREE.Quaternion().setFromAxisAngle(Y, -headingOf(wp('RightUpLeg'), wp('LeftUpLeg')));
 
     this.bones = bones.map((b) => {
-      const name = strip(b.name);
+      const name = appName(b.name);
       const parent = bones.indexOf(b.parent);
       const calWorld = b.getWorldQuaternion(new THREE.Quaternion()).premultiply(fix);
       const info = { name, objName: b.name, parent, calLocal: b.quaternion.clone(), soma: -1, K: null, swing: null };
@@ -104,12 +161,12 @@ export class MannequinKit {
     const hips = byName.Hips;
     this.rootParentQuat = hips.parent.getWorldQuaternion(new THREE.Quaternion());
     this.rootParentInv = hips.parent.matrixWorld.clone().invert();
-    this.heightScale = wp('Hips').y / cal.pos[0].y;
-    this.headIndex = bones.findIndex((b) => strip(b.name) === 'Head');
-    // Ground probes: heel/ankle, ball and toe tip keep their idle height above the floor;
+    this.headIndex = bones.findIndex((b) => appName(b.name) === 'Head');
+    // Ground probes: ankle, heel, ball and toe tip keep their standing height above the floor;
     // knees keep a small radius. Poses are lifted so no probe goes below y = 0.
-    const soles = ['LeftFoot', 'LeftToeBase', 'LeftToe_End', 'RightFoot', 'RightToeBase', 'RightToe_End'].filter((n) => byName[n]);
+    const soles = ['LeftFoot', 'LeftHeel', 'LeftToeBase', 'LeftToe_End', 'RightFoot', 'RightHeel', 'RightToeBase', 'RightToe_End'].filter((n) => byName[n]);
     const floorY = Math.min(...soles.map((n) => wp(n).y));
+    this.heightScale = (wp('Hips').y - floorY) / cal.pos[0].y; // the model's size against SOMA's
     this.groundProbes = [
       ...soles.map((n) => ({ i: bones.indexOf(byName[n]), h: wp(n).y - floorY })),
       ...['LeftLeg', 'RightLeg'].map((n) => ({ i: bones.indexOf(byName[n]), h: 0.06 })),
@@ -118,7 +175,6 @@ export class MannequinKit {
         .filter(([n]) => byName[n]).map(([n, h]) => ({ i: bones.indexOf(byName[n]), h })),
     ];
     this._newArrays = newArrays;
-    mixer.stopAllAction();
   }
 
   create(bodyMat, jointMat = bodyMat, opts = {}) { return new Mannequin(this, bodyMat, jointMat, opts); }
@@ -238,12 +294,12 @@ export class Mannequin {
   }
 
   /**
-   * The body's bones as line segments (x,y,z pairs) plus joint points, from the X Bot
+   * The body's bones as line segments (x,y,z pairs) plus joint points, from the model's
    * skeleton that moves the mesh. Fingers and eyes are left out to keep it readable.
    */
   boneLines() {
     if (!this._boneIdx) {
-      const skip = /Thumb|Index|Middle|Ring|Pinky|Eye/;
+      const skip = /thumb|^f_|pelvis|Heel|Eye/; // fingers, the Rigify pelvis helpers, heels
       const keep = this.kit.bones.map((b) => !skip.test(b.name));
       this._boneIdx = this.kit.bones.map((b, i) => i).filter((i) => keep[i] && this.kit.bones[i].parent >= 0 && keep[this.kit.bones[i].parent]);
       this._jointIdx = this.kit.bones.map((b, i) => i).filter((i) => keep[i]);
@@ -260,7 +316,7 @@ export class Mannequin {
     return { seg, joints };
   }
 
-  /** World positions (x,y,z triples) of named X Bot bones, appended to `out`. */
+  /** World positions (x,y,z triples) of named model bones (app names), appended to `out`. */
   jointPositions(names, out) {
     if (!this._named) this._named = {};
     const key = names.join();
@@ -308,7 +364,7 @@ export class Mannequin {
 
 
   /**
-   * World-space box round the body (the X Bot's bones, padded for flesh and the top of the
+   * World-space box round the body (the model's bones, padded for flesh and the top of the
    * head). It starts a little above the lowest bone, so a flat shape on the floor doesn't count.
    */
   bounds(target) {

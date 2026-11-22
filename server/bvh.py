@@ -1,3 +1,6 @@
+# Written to match motionbricks.io.bvh from NVlabs/motionbricks,
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES, licensed under the Apache License 2.0
+# (see licenses/Apache-2.0.txt). Modified. See NOTICE.
 """Minimal numpy BVH loader matching motionbricks.io.bvh.
 
 The SOMA BVH files have a static `Root` joint above `Hips`. The MotionBricks apps

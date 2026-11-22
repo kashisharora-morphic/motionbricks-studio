@@ -1,3 +1,6 @@
+# Portions derived from NVlabs/motionbricks (motionbricks/model/soma/engine.py and kernels.py),
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES, licensed under the Apache License 2.0
+# (see licenses/Apache-2.0.txt). Modified: ported to numpy and ONNX Runtime. See NOTICE.
 """MotionBricks SOMA inference on CPU with ONNX Runtime.
 
 A numpy port of motionbricks/model/soma/{engine,kernels}.py so the bundled ONNX

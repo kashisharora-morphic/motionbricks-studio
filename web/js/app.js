@@ -2395,7 +2395,7 @@ function loop(now) {
     S.lib = lib;
     window.__studio = { S, setFrame, keyPoseButton, generate, cyclePose, editable, syncState, get actor() { return actor; }, camera, controls, get rcam() { return rcam; }, viewCube, snapView, get drag() { return drag; }, get hover() { return hover; }, footLines, addProp, selectProp, setPropMode, tc, propMeshes, keyGhosts, genGhosts, bdGhosts, spanHandles, chain, keyPath, genPath, jointPath, step: () => { updateScene(); renderer.render(scene, rcam); }, fkSoma, kit: () => kit, poseOps: { twoBone, aimBone, spineLean, applySafely, poseUndo, poseRedo, poseReset }, landCamera: () => stepCamTween(performance.now() + 1e6), jointGizmo, jgPick };
     for (const p of lib.poses) { p.rot = new Float32Array(p.rot.flat()); S.poses[p.id] = p; S.order.push(p.id); }
-    kit = await MannequinKit.load(lib.skeleton, S.poses.stand, '/models/Xbot.glb');
+    kit = await MannequinKit.load(lib.skeleton, S.poses.stand, '/models/mannequin.glb');
     actor = kit.create(woodMat, jointMat, { shadows: true });
     scene.add(actor.group);
     for (let i = 0; i < ONION_OFFSETS.length; i++) { const g = kit.create(genGhostMats[i], genGhostMats[i], { flatOrder: i }); g.visible = false; scene.add(g.group); genGhosts.push(g); }

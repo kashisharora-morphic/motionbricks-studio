@@ -1,3 +1,6 @@
+# Written to match the quaternion maths of the NVlabs/motionbricks runtime,
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES, licensed under the Apache License 2.0
+# (see licenses/Apache-2.0.txt). Modified. See NOTICE.
 """Vectorized quaternion and rigid-transform helpers (XYZW, Hamilton product).
 
 These mirror the Warp built-ins the MotionBricks runtime uses, so numpy results

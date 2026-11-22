@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pose to Motion</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/vendor/three/build/three.module.js",
+        "three/addons/": "/vendor/three/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="viewport">
+    <nav class="view-menu" aria-label="View options">
+      <span class="menu-label">View</span>
+      <div class="vpair" role="group" aria-label="Mannequin">
+        <button id="tog-actor" class="vbtn actor on" data-tip="Mannequin · 3" aria-label="Show the mannequin"><span class="ic"></span></button>
+        <button id="tog-jointpath" class="vbtn jointpath sub" data-tip="Joint paths · 7" aria-label="Show the paths of the mannequin's head, hands and feet"><span class="ic"></span></button>
+        <button id="tog-bones" class="vbtn bones sub" data-tip="Bones · 6" aria-label="Show the mannequin's bones"><span class="ic"></span></button>
+        <button id="tog-feet" class="vbtn feet sub on" data-tip="Foot contacts · 9" aria-label="Outline the feet when they touch the floor"><span class="ic"></span></button>
+      </div>
+      <div class="vpair" role="group" aria-label="Saved poses">
+        <button id="tog-keys" class="vbtn keys on" data-tip="Saved poses · 1" aria-label="Show saved poses"><span class="ic"></span></button>
+        <button id="tog-keypath" class="vbtn keypath sub on" data-tip="Their path · 4" aria-label="Show the path between saved poses"><span class="ic"></span></button>
+      </div>
+      <div class="vpair" role="group" aria-label="Breakdowns">
+        <button id="tog-bds" class="vbtn bds on" data-tip="Breakdowns · 8" aria-label="Show breakdown poses"><span class="ic"></span></button>
+        <button id="tog-handles" class="vbtn handles sub on" data-tip="Jump height handles · 0" aria-label="Show the handles that set each jump's height"><span class="ic"></span></button>
+      </div>
+      <div class="vpair" role="group" aria-label="In-betweens">
+        <button id="tog-tweens" class="vbtn tweens on" data-tip="In-betweens · 2" aria-label="Show in-betweens"><span class="ic"></span></button>
+        <button id="tog-genpath" class="vbtn genpath sub on" data-tip="Generated path · 5" aria-label="Show the generated hip path"><span class="ic"></span></button>
+      </div>
+    </nav>
+    <div class="view-cube" aria-label="View cube">
+      <div id="view-cube-host" class="vc-host"></div>
+      <div class="vc-foot">
+        <div id="vc-name" class="vc-name"></div>
+        <button id="vc-proj" class="vc-proj" title="Perspective · click for orthographic" aria-label="Switch to orthographic"><span class="ic"></span></button>
+      </div>
+    </div>
+    <div id="add-list" class="add-list hidden" role="menu" aria-label="Add a shape"></div>
+    <div id="prop-tools" class="prop-tools hidden" role="toolbar" aria-label="Shape tools">
+      <button data-mode="translate" title="Move (W)" aria-label="Move"><span class="ic"></span></button>
+      <button data-mode="rotate" title="Rotate (E)" aria-label="Rotate"><span class="ic"></span></button>
+      <button data-mode="scale" title="Scale (R)" aria-label="Scale"><span class="ic"></span></button>
+      <button data-act="delete" class="pt-del" title="Delete shape (Del)" aria-label="Delete shape"><span class="ic"></span></button>
+    </div>
+    <div id="span-chips" class="span-chips"></div>
+    <div id="pose-label" class="pose-label"></div>
+    <div id="pose-mode-tag" class="pose-mode-tag hidden">Pose mode · drag the joints</div>
+    <div id="pose-tools" class="pose-tools hidden" role="toolbar" aria-label="Pose tools">
+      <button id="pose-undo" title="Undo (Ctrl/Cmd+Z)"><span class="ic"></span>Undo</button>
+      <button id="pose-redo" title="Redo (Shift+Ctrl/Cmd+Z)"><span class="ic"></span>Redo</button>
+      <button id="pose-reset" title="Back to the pose you started from"><span class="ic"></span>Reset</button>
+    </div>
+    <div id="toast" class="toast hidden"></div>
+    <div id="loading" class="loading">Loading…</div>
+  </div>
+
+  <footer id="bar">
+    <div class="transport">
+      <button id="btn-play" class="icon" title="Play / pause (Space)" aria-label="Play"><span class="ic"></span></button>
+      <div class="readout"><span id="frame-readout">0</span><span class="slash">/</span><input id="len-input" type="number" min="30" max="3600" step="1" value="240" title="Animation length in frames (30 frames = 1 second)"></div>
+    </div>
+    <canvas id="timeline"></canvas>
+  </footer>
+
+  <div id="tl-menu" class="tl-menu hidden" role="menu">
+    <button data-act="copy" role="menuitem">Copy<kbd>⌘C</kbd></button>
+    <button data-act="cut" role="menuitem">Cut<kbd>⌘X</kbd></button>
+    <button data-act="paste" role="menuitem">Paste <span class="where"></span><kbd>⌘V</kbd></button>
+    <button data-act="delete" role="menuitem" class="danger">Delete<kbd>Del</kbd></button>
+  </div>
+
+  <div class="big-buttons">
+    <button id="btn-key" class="big key" title="Add a keyframe with this pose at this moment (K)"><span class="ic"></span><span class="txt"><span class="t"></span><small class="badge"></small></span></button>
+    <div class="split">
+      <button id="btn-generate" class="big gen" title="Let the AI generate the in-between motion for your keyframes (G)"><span class="ic"></span><span class="txt"><span class="t"></span><small id="gen-tag" class="badge"></small></span></button>
+      <button id="btn-clear-gen" class="big gen side" title="Clear the generated in-betweens (your keyframes stay)" aria-label="Clear generated motion"><span class="ic"></span></button>
+    </div>
+    <button id="btn-cancel-pose" class="big cancel hidden" title="Leave pose mode and put the pose back (Esc)"><span class="ic"></span><span class="txt"><span class="t">Cancel</span></span></button>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
